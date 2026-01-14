@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "events": "^3.3.0",
     "framer-motion": "^12.26.2",
     "parse": "^8.0.0",
     "react": "^19.2.0",

@@ -1,8 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-parchment: #F4F1EA;
+  --color-ink: #1A1A1A;
+  --color-klein: #002FA7;
+
+  --font-mono: "JetBrains Mono", monospace;
+  --font-serif: "EB Garamond", serif;
+}
 
 @layer base {
   body {
