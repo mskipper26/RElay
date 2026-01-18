@@ -1,40 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import Parse from '../../services/parseClient';
 import { generateInvite as genInviteAuth } from '../../services/authService';
-import { saveImageToLibrary as saveImgService } from '../../services/letterService';
+import { saveImageToLibrary as saveImgService, getProfileStats } from '../../services/letterService';
 import { ImageGalleryModal } from '../common/ImageGalleryModal';
 
-export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
-    const user = Parse.User.current();
-    const [stats, setStats] = useState({ referrals: 0, friends: 0 });
+export const ProfileScreen = ({ onClose, targetUser }: { onClose: () => void, targetUser?: any }) => {
+    const currentUser = Parse.User.current();
+    const user = targetUser || currentUser;
+    const isMe = user?.id === currentUser?.id;
+
+    const [stats, setStats] = useState({ referrals: 0, friends: 0, sent: 0, impressions: 0, bio: '' });
     const [inviteCode, setInviteCode] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [generatedCode, setGeneratedCode] = useState('');
     const [showGallery, setShowGallery] = useState(false);
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [bioText, setBioText] = useState('');
 
     useEffect(() => {
         if (user) {
             const loadStats = async () => {
-                // Count Friends (Friend Class)
-                const Friend = Parse.Object.extend('Friend');
-                const q1 = new Parse.Query(Friend);
-                q1.equalTo('userA', user);
-                const q2 = new Parse.Query(Friend);
-                q2.equalTo('userB', user);
-                const friendCount = await Parse.Query.or(q1, q2).count();
-
-                // Count Referrals (InviteCode Class)
-                const InviteCode = Parse.Object.extend('InviteCode');
-                const inviteQuery = new Parse.Query(InviteCode);
-                inviteQuery.equalTo('createdBy', user);
-                inviteQuery.equalTo('isUsed', true);
-                const referralCount = await inviteQuery.count();
-
-                setStats({ referrals: referralCount, friends: friendCount });
+                try {
+                    const data = await getProfileStats(user.id);
+                    setStats(data);
+                    if (data.bio) setBioText(data.bio);
+                } catch (err) {
+                    console.error("Failed to load profile stats", err);
+                }
             };
             loadStats();
         }
     }, [user]);
+
+    const handleSaveBio = async () => {
+        if (!user || !isMe) return;
+        try {
+            user.set('bio', bioText);
+            await user.save();
+            setStats(prev => ({ ...prev, bio: bioText }));
+            setIsEditingBio(false);
+        } catch (err: any) {
+            console.error("Failed to save bio", err);
+            alert("Failed to save bio: " + err.message);
+        }
+    };
 
     const handleGenerateInvite = async () => {
         try {
@@ -74,53 +83,7 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
         }
     };
 
-    const handleFileUpload = async (e: any) => {
-        const file = e.target.files[0];
-        if (!file || !user) return;
 
-        setUploading(true);
-        try {
-            // Use service to save to library FIRST, then set as PFP
-            const result = await saveImgService(file);
-
-            // Re-fetch to get the file object? No, saveImageToLibrary returns {url, id}.
-            // So we need to create a Parse.File again?
-            // Actually, saveImageToLibrary saves a NEW file.
-            // I can just use the manual logic here just like before, but ALSO save to library?
-            // Or just use the original logic (creates File) and create an Image record pointing to it.
-            // Let's use saveImageToLibrary, but we need the Parse.File object to set to user.
-            // saveImageToLibrary saves the file. 
-            // result.url is available.
-
-            // To be robust:
-            // 1. Save File.
-            // 2. Create Image wrapper.
-            // 3. Set User PFP to File.
-
-            // Replicating saveImageToLibrary logic here to get the File object handle:
-            const parseFile = new Parse.File(file.name, file);
-            await parseFile.save();
-
-            // Save to Library (Create Image)
-            const ImageObject = Parse.Object.extend('Image');
-            const imageRecord = new ImageObject();
-            imageRecord.set('user', user);
-            imageRecord.set('file', parseFile);
-            imageRecord.setACL(new Parse.ACL(user));
-            await imageRecord.save();
-
-            // Set PFP
-            user.set('profilePicture', parseFile);
-            await user.save();
-
-            alert('Profile Picture Updated');
-        } catch (error) {
-            console.error(error);
-            alert('Upload Failed');
-        } finally {
-            setUploading(false);
-        }
-    };
 
     const pfpUrl = user?.get('profilePicture')?.url();
 
@@ -148,61 +111,103 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
                             <span className="text-4xl opacity-20">?</span>
                         )}
 
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center space-y-2">
-                            <label className="cursor-pointer text-parchment text-[10px] uppercase text-center hover:text-klein">
-                                Upload
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
-                            </label>
-                            <button
-                                onClick={() => setShowGallery(true)}
-                                className="text-parchment text-[10px] uppercase text-center hover:text-klein"
-                            >
-                                Library
-                            </button>
-                        </div>
+                        {/* Hover Overlay - Only for Me */}
+                        {isMe && (
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
+                                <button
+                                    onClick={() => setShowGallery(true)}
+                                    className="text-parchment text-[10px] uppercase text-center hover:text-klein tracking-widest"
+                                >
+                                    Update Photo
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex-1 space-y-2">
                         <div className="text-xs uppercase tracking-widest opacity-50">Alias</div>
                         <div className="text-2xl font-serif italic">{user?.get('username')}</div>
 
-                        <div className="flex space-x-8 pt-4">
-                            <div>
-                                <div className="text-[10px] uppercase tracking-widest opacity-50">Referrals</div>
-                                <div className="text-xl font-bold">{stats.referrals}</div>
-                            </div>
+                        <div className="pt-2">
+                            <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Bio</div>
+                            {isEditingBio ? (
+                                <div className="space-y-2">
+                                    <textarea
+                                        value={bioText}
+                                        onChange={(e) => setBioText(e.target.value)}
+                                        className="w-full bg-ink/5 border border-ink/20 p-2 text-sm font-serif italic focus:outline-none focus:border-klein resize-none"
+                                        rows={3}
+                                        maxLength={140}
+                                        placeholder="Enter your public bio..."
+                                    />
+                                    <div className="flex space-x-2 text-[10px] uppercase tracking-widest">
+                                        <button onClick={handleSaveBio} className="hover:text-klein underline">Save</button>
+                                        <button onClick={() => { setIsEditingBio(false); setBioText(stats.bio || ''); }} className="hover:text-red-700 underline">Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    onClick={() => isMe && setIsEditingBio(true)}
+                                    className={`text-sm font-serif italic leading-relaxed ${isMe ? "cursor-pointer hover:bg-ink/5 -ml-2 p-2 rounded transition-colors group/bio" : ""}`}
+                                >
+                                    {stats.bio ? (
+                                        stats.bio
+                                    ) : (
+                                        <span className="opacity-30">No bio logged.</span>
+                                    )}
+                                    {isMe && !stats.bio && (
+                                        <span className="opacity-50 ml-2 text-[10px] uppercase not-italic tracking-widest group-hover/bio:text-klein">Click to add</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex space-x-6 pt-4">
                             <div>
                                 <div className="text-[10px] uppercase tracking-widest opacity-50">Network</div>
                                 <div className="text-xl font-bold">{stats.friends}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] uppercase tracking-widest opacity-50">Sent</div>
+                                <div className="text-xl font-bold">{stats.sent}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] uppercase tracking-widest opacity-50">Impressions</div>
+                                <div className="text-xl font-bold">{stats.impressions}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] uppercase tracking-widest opacity-50">Ref</div>
+                                <div className="text-xl font-bold">{stats.referrals}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Invite Generation */}
-                <div className="border-t border-ink pt-8">
-                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4">Grow Network</h3>
-                    <div className="bg-ink/5 p-6 text-center space-y-4">
-                        {generatedCode ? (
-                            <div className="animate-in fade-in zoom-in duration-300">
-                                <div className="text-xs uppercase opacity-50 mb-1">Single-Use Code</div>
-                                <div className="text-4xl font-mono font-bold tracking-[0.5em] text-klein selection:bg-ink selection:text-parchment">
-                                    {generatedCode}
+                {/* Invite Generation - Only for Me */}
+                {isMe && (
+                    <div className="border-t border-ink pt-8">
+                        <h3 className="text-sm font-bold uppercase tracking-widest mb-4">Grow Network</h3>
+                        <div className="bg-ink/5 p-6 text-center space-y-4">
+                            {generatedCode ? (
+                                <div className="animate-in fade-in zoom-in duration-300">
+                                    <div className="text-xs uppercase opacity-50 mb-1">Single-Use Code</div>
+                                    <div className="text-4xl font-mono font-bold tracking-[0.5em] text-klein selection:bg-ink selection:text-parchment">
+                                        {generatedCode}
+                                    </div>
+                                    <p className="text-[10px] mt-2 opacity-60">Share this code to automatically friend a new user.</p>
+                                    <button onClick={() => setGeneratedCode('')} className="mt-4 text-xs underline hover:text-klein">Generate Another</button>
                                 </div>
-                                <p className="text-[10px] mt-2 opacity-60">Share this code to automatically friend a new user.</p>
-                                <button onClick={() => setGeneratedCode('')} className="mt-4 text-xs underline hover:text-klein">Generate Another</button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={handleGenerateInvite}
-                                className="bg-ink text-parchment px-8 py-3 text-xs uppercase tracking-widest hover:opacity-90"
-                            >
-                                Generate Invite Code
-                            </button>
-                        )}
+                            ) : (
+                                <button
+                                    onClick={handleGenerateInvite}
+                                    className="bg-ink text-parchment px-8 py-3 text-xs uppercase tracking-widest hover:opacity-90"
+                                >
+                                    Generate Invite Code
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

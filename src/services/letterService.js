@@ -142,7 +142,8 @@ export const saveImageToLibrary = async (file) => {
     await imageRecord.save();
     return {
         url: parseFile.url(),
-        id: imageRecord.id
+        id: imageRecord.id,
+        file: parseFile
     };
 };
 
@@ -253,4 +254,8 @@ export const getFriendRequests = async () => {
         fromUserId: r.get('fromUser') ? r.get('fromUser').id : null,
         createdAt: r.createdAt
     }));
+};
+
+export const getProfileStats = async (targetUserId = null) => {
+    return await Parse.Cloud.run('getProfileStats', { targetUserId });
 };

@@ -169,8 +169,14 @@ export const ComposeScreen = ({ onClose, onSent, draft }: { onClose: () => void;
                     {attachmentUrls.length > 0 && (
                         <div className="flex space-x-2 pt-2">
                             {attachmentUrls.map((url, i) => (
-                                <div key={i} className="w-16 h-16 border border-ink/20 relative">
+                                <div key={i} className="w-16 h-16 border border-ink/20 relative group">
                                     <img src={url} className="w-full h-full object-cover" />
+                                    <button
+                                        onClick={() => setAttachmentUrls(prev => prev.filter((_, idx) => idx !== i))}
+                                        className="absolute -top-2 -right-2 bg-red-600 text-parchment rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:scale-110"
+                                    >
+                                        &times;
+                                    </button>
                                 </div>
                             ))}
                         </div>

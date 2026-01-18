@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { getFriends } from '../../services/letterService';
 import Parse from '../../services/parseClient';
 
+import { ProfileScreen } from './ProfileScreen';
+
 export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
     const [friends, setFriends] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedFriend, setSelectedFriend] = useState<any>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -24,6 +27,30 @@ export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
         load();
     }, []);
 
+    if (selectedFriend) {
+        // Create a temporary Parse User-like object or fetch the full user
+        // The friend object from getFriends has basic fields.
+        // We might need to construct a lightweight Parse.User placeholder or fetch.
+        // Since we have the ID, we can just pass it to ProfileScreen if it did its own fetch, 
+        // but ProfileScreen expects a Parse.User object.
+        // Let's create a partial object.
+        const User = Parse.Object.extend('_User');
+        const userObj = new User();
+        userObj.id = selectedFriend.id;
+        userObj.set('username', selectedFriend.username);
+        // Note: ProfileScreen will fetch stats using the ID. PFP is handled via stats or user Get?
+        // Actually ProfileScreen uses user.get('profilePicture') for the image.
+        // So we should probably pass a basic object that has these.
+        if (selectedFriend.profilePicture) {
+            // Mock a file object with url() method if needed, or update ProfileScreen to handle strings
+            // Re-reading ProfileScreen: user?.get('profilePicture')?.url()
+            // We can mock this structure.
+            userObj.set('profilePicture', { url: () => selectedFriend.profilePicture });
+        }
+
+        return <ProfileScreen onClose={() => setSelectedFriend(null)} targetUser={userObj} />;
+    }
+
     return (
         <div className="fixed inset-0 bg-parchment z-50 flex flex-col p-8 font-mono text-ink overflow-y-auto">
             <header className="flex justify-between items-center border-b border-ink pb-4 mb-8">
@@ -42,7 +69,11 @@ export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
                             // friend is now a POJO, profilePicture is a URL string
                             const pfp = friend.profilePicture;
                             return (
-                                <div key={friend.id} className="border border-ink/20 p-4 flex items-center space-x-4 hover:bg-ink/5 transition-colors">
+                                <div
+                                    key={friend.id}
+                                    onClick={() => setSelectedFriend(friend)}
+                                    className="border border-ink/20 p-4 flex items-center space-x-4 hover:bg-ink/5 transition-colors cursor-pointer"
+                                >
                                     <div className="w-12 h-12 bg-ink/10 flex-shrink-0">
                                         {pfp ? (
                                             <img src={pfp} className="w-full h-full object-cover grayscale" />

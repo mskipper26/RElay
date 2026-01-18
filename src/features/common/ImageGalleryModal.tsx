@@ -39,7 +39,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ onClose, o
             const result = await saveImageToLibrary(file);
             // Prepend new image and select it automatically? Or just show it?
             // Let's just refresh the list or add it manually
-            setImages(prev => [{ id: result.id, url: result.url, createdAt: new Date() }, ...prev]);
+            setImages(prev => [{ id: result.id, url: result.url, file: result.file, createdAt: new Date() }, ...prev]);
         } catch (err) {
             console.error('Upload failed', err);
             alert('Failed to upload image');
@@ -82,7 +82,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ onClose, o
                                     className="aspect-square border border-ink/10 relative group cursor-pointer overflow-hidden"
                                     onClick={() => onSelect(img)}
                                 >
-                                    <img src={img.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <img src={img.url} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0" />
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                         <span className="opacity-0 group-hover:opacity-100 bg-parchment px-3 py-1 text-xs uppercase tracking-widest shadow-sm transform translate-y-4 group-hover:translate-y-0 transition-all">
                                             Select
