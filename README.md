@@ -1,40 +1,52 @@
-# RE:lay
+# RE:LAY (LetterApp)
 
-> "A high-stakes protocol for intentional correspondence."
+RE:LAY is a slow-social networking application built around the concept of digital letters. It emphasizes meaningful connection over instant gratification, featuring a "Terminal Scriptorium" aesthetic.
 
-RE:lay is a social network built on digital "chain letters" where scarcity is the core mechanic.
+## Features
 
-## The Core Protocol
+### 📬 The Mailbox
+- **Inbox**: Receive digital letters from friends. Letters are held in custody and can be burned or archived.
+- **Sent**: A permanent record of your authored content. (Read-only view).
+- **Archive**: Keep up to 10 letters permanently. Archived letters update live if new comments are added to the chain.
 
-### Scarcity & The Loop
-- **The Letter**: Contains a Subject, Body, and up to 3 Images.
-- **Participation**: You can add exactly one comment to the sequential list.
-- **Hand-off**: You can forward the letter to up to 3 friends.
-- **Scarcity Rule**: Once forwarded, the letter is **deleted** from your Mailbox.
+### ✍️ Composition & Forwarding
+- **Compose**: Write letters with rich text (Markdown support) and attach up to 3 images.
+- **Forwarding**: Forward received letters to up to 3 friends. Add your own annotation/comment to the chain.
+- **Chain History**: View the full lineage of a letter, including who forwarded it and their annotations.
 
-### The Archive
-- Users can "Archive" up to **10 letters**.
-- Archived letters are **read-only**.
-- They update in real-time but cannot be commented on or forwarded.
+### 🤝 Social Network
+- **Invite-Only**: New users need a unique invite code to join.
+- **Friend System**: Connect with previous senders directly from a letter.
+- **Profiles**: View friend profiles, referral stats, and manage your network.
 
-## Setup Instructions
+### ⚡ Live Wire
+- **Real-time Chat**: A shared live chat feed for ephemeral communication.
+- **Smart Scroll**: Auto-scrolls for new messages only when you are at the bottom of the feed.
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+## Technology Stack
 
-2. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
+- **Frontend**: React (Vite), TailwindCSS, Framer Motion
+- **Backend**: Parse Server (Node.js/Express)
+- **Database**: MongoDB (with GridFS for image storage)
+- **Real-time**: Parse LiveQuery (WebSocket)
 
-3. **Build for Production**
-   ```bash
-   npm run build
-   ```
+## Getting Started
 
-## Tech Stack
-- **Frontend**: React (Vite), Tailwind CSS, Framer Motion
-- **Backend**: Parse Server + MongoDB
-- **Style**: "The Terminal Scriptorium" (Brutalist, Monospaced)
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+
+2.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+
+3.  **Build for Production**:
+    ```bash
+    npm run build
+    ```
+
+## License
+
+Private / Proprietary.
