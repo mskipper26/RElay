@@ -1,15 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const LetterPreview = ({ letter }) => {
-    const subject = letter.get('subject') || 'NO SUBJECT';
-    const originator = letter.get('originator');
-    const originatorName = originator ? originator.get('username') : 'UNKNOWN';
-    const chainCount = letter.get('chainCount') || 0;
+const LetterPreview = ({ letter }: { letter: any }) => {
+    // letter is now a POJO from letterService
+    const { subject, originalAuthor, chainIndex, id } = letter;
+    const originatorName = originalAuthor || 'UNKNOWN';
+    const chainCount = chainIndex || 1;
 
-    // Fake "Unread" logic for now (could be based on local storage or 'readBy' array)
-    // For aesthetic matching the prompt: "Use International Klein Blue (#002FA7) for the 'Unread' indicator."
-    const isUnread = true;
+    // "Unread" logic can remain simpler for now
+    const isUnread = false; // Disable fake blue dot for now until logic is clearer or user asks
+
 
     return (
         <motion.div

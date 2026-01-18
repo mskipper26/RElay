@@ -1,27 +1,51 @@
 import { useState, useEffect } from 'react';
 import Parse from '../services/parseClient';
-import { getMailbox } from '../services/letterService';
+import { getMailbox, getArchive, getFriendRequests, getSent } from '../services/letterService';
 
-export const useMailbox = () => {
+export const useMailbox = (type = 'inbox') => {
     const [letters, setLetters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const fetchLetters = async () => {
+        try {
+            setLoading(true);
+            let results = [];
+            if (type === 'inbox') {
+                const letters = await getMailbox();
+                const requests = await getFriendRequests();
+
+                // Map requests to pseudo-letters
+                const requestLetters = requests.map(r => ({
+                    id: r.id,
+                    type: 'request',
+                    subject: 'Friend Request',
+                    body: `User ${r.fromUser} would like to connect with you via the Relay network.`,
+                    sender: r.fromUser,
+                    receivedAt: r.createdAt,
+                    images: [],
+                    requestId: r.id,
+                    originalAuthor: 'System',
+                    chainIndex: 0
+                }));
+
+                results = [...letters, ...requestLetters].sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
+            } else if (type === 'sent') {
+                results = await getSent();
+            } else {
+                results = await getArchive();
+            }
+            setLetters(results);
+        } catch (err) {
+            console.error('Error fetching mailbox:', err);
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         let subscription;
-
-        const fetchLetters = async () => {
-            try {
-                setLoading(true);
-                const results = await getMailbox();
-                setLetters(results);
-            } catch (err) {
-                console.error('Error fetching mailbox:', err);
-                setError(err);
-            } finally {
-                setLoading(false);
-            }
-        };
 
         const setupLiveQuery = async () => {
             const currentUser = Parse.User.current();
@@ -29,17 +53,24 @@ export const useMailbox = () => {
 
             const Letter = Parse.Object.extend('Letter');
             const query = new Parse.Query(Letter);
-            query.equalTo('currentHolders', currentUser);
+            query.equalTo('recipient', currentUser);
+
+            if (type === 'inbox') {
+                // Hard to replicate OR logic in LiveQuery subscription easily without complex client
+                // But most simple queries work.
+                // Ideally we listen to ALL changes to letters we hold, and then client-side filter or re-fetch.
+                // Let's just listen to all held letters for now and refresh.
+            }
 
             subscription = await query.subscribe();
 
             // Handle new letters entering mailbox
             subscription.on('create', (letter) => {
-                setLetters((prev) => [letter, ...prev]);
+                fetchLetters();
             });
 
             subscription.on('enter', (letter) => {
-                setLetters((prev) => [letter, ...prev]);
+                fetchLetters();
             });
 
             // Handle letters leaving mailbox (forwarded/deleted)
@@ -51,9 +82,9 @@ export const useMailbox = () => {
                 setLetters((prev) => prev.filter((l) => l.id !== letter.id));
             });
 
-            // Handle updates (e.g. new comments on held letters)
+            // Handle updates
             subscription.on('update', (letter) => {
-                setLetters((prev) => prev.map((l) => (l.id === letter.id ? letter : l)));
+                fetchLetters();
             });
         };
 
@@ -65,7 +96,8 @@ export const useMailbox = () => {
                 subscription.unsubscribe();
             }
         };
-    }, []);
+    }, [type]); // Re-run when type changes
 
-    return { letters, loading, error };
+    return { letters, loading, error, refresh: fetchLetters };
 };
+

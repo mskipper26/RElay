@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { redeemInvite } from '../../services/authService';
+import { redeemInvite, login } from '../../services/authService';
 
 export const InviteScreen = ({ onLogin }) => {
-    const [step, setStep] = useState('code'); // 'code' | 'register'
+    const [step, setStep] = useState('code'); // 'code' | 'register' | 'login'
     const [inviteCode, setInviteCode] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -17,6 +17,22 @@ export const InviteScreen = ({ onLogin }) => {
             setError('');
         } else {
             setError('INVITE CODE REQUIRED');
+        }
+    };
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            if (!username || !password) throw new Error('CREDENTIALS_MISSING');
+            const user = await login(username, password);
+            if (onLogin) onLogin(user);
+        } catch (err) {
+            setError(err.message || 'LOGIN_FAILED');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -45,9 +61,9 @@ export const InviteScreen = ({ onLogin }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-parchment text-ink font-mono p-4 selection:bg-klein selection:text-white">
             <div className="w-full max-w-md border border-ink p-8">
-                <h1 className="text-xl font-bold mb-8 uppercase tracking-widest text-center border-b border-ink pb-4">
-                    RE:lay Protocol
-                </h1>
+                <div className="text-4xl font-serif italic mb-8 tracking-widest text-ink/80">
+                    RE:lay
+                </div>
 
                 <AnimatePresence mode="wait">
                     {step === 'code' ? (
@@ -60,7 +76,7 @@ export const InviteScreen = ({ onLogin }) => {
                             className="space-y-6"
                         >
                             <div className="flex flex-col space-y-2">
-                                <label className="text-sm font-bold uppercase">Initialize Protocol &gt; Invite Code:</label>
+                                <label className="text-sm font-bold uppercase">Initialize System &gt; Invite Code:</label>
                                 <input
                                     type="text"
                                     value={inviteCode}
@@ -76,6 +92,55 @@ export const InviteScreen = ({ onLogin }) => {
                             >
                                 Start Handshake
                             </button>
+                        </motion.form>
+                    ) : step === 'login' ? (
+                        <motion.form
+                            key="login-form"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            onSubmit={handleLogin}
+                            className="space-y-6"
+                        >
+                            <div className="flex flex-col space-y-2">
+                                <label className="text-sm font-bold uppercase">Identity &gt; Username:</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="bg-transparent border-b border-ink focus:outline-none focus:border-klein py-2 w-full rounded-none"
+                                    placeholder="ALIAS"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex flex-col space-y-2">
+                                <label className="text-sm font-bold uppercase">Secure Key &gt; Password:</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="bg-transparent border-b border-ink focus:outline-none focus:border-klein py-2 w-full rounded-none"
+                                    placeholder="PASSPHRASE"
+                                />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setStep('code')}
+                                    className="flex-1 text-xs border border-transparent hover:underline opacity-60"
+                                >
+                                    &lt; Back
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="flex-2 w-full border border-ink py-3 hover:bg-ink hover:text-parchment transition-colors uppercase font-bold text-sm tracking-wider disabled:opacity-50"
+                                >
+                                    {loading ? 'AUTHENTICATING...' : 'Access Terminal'}
+                                </button>
+                            </div>
                         </motion.form>
                     ) : (
                         <motion.form
@@ -143,6 +208,17 @@ export const InviteScreen = ({ onLogin }) => {
                     </motion.div>
                 )}
             </div>
+
+            {step === 'code' && (
+                <div className="fixed bottom-12 text-center">
+                    <button
+                        onClick={() => setStep('login')}
+                        className="text-xs uppercase tracking-widest opacity-50 hover:opacity-100 hover:underline"
+                    >
+                        Already have a key? (Login)
+                    </button>
+                </div>
+            )}
 
             <div className="fixed bottom-4 text-[10px] opacity-40">
                 TERMINAL SCRIPTORIUM v0.1.0
