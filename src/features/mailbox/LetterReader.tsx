@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import Parse from '../../services/parseClient';
 import { forwardLetter, burnLetter, getComments, getFriends, sendFriendRequest, respondToFriendRequest } from '../../services/letterService';
 
@@ -237,8 +238,23 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
 
                 <h1 className="text-4xl font-serif italic mb-8">{subject}</h1>
 
-                <div className="font-serif text-lg leading-relaxed whitespace-pre-wrap mb-12">
-                    {body}
+                <div className="font-serif text-lg leading-relaxed mb-12 markdown-body">
+                    <ReactMarkdown
+                        components={{
+                            p: ({ node, ...props }: any) => <p className="mb-4" {...props} />,
+                            h1: ({ node, ...props }: any) => <h1 className="text-2xl font-bold uppercase tracking-widest mb-4 mt-8" {...props} />,
+                            h2: ({ node, ...props }: any) => <h2 className="text-xl font-bold uppercase tracking-widest mb-3 mt-6" {...props} />,
+                            h3: ({ node, ...props }: any) => <h3 className="text-lg font-bold uppercase tracking-widest mb-2 mt-4" {...props} />,
+                            ul: ({ node, ...props }: any) => <ul className="list-disc pl-5 mb-4" {...props} />,
+                            ol: ({ node, ...props }: any) => <ol className="list-decimal pl-5 mb-4" {...props} />,
+                            li: ({ node, ...props }: any) => <li className="mb-1" {...props} />,
+                            a: ({ node, ...props }: any) => <a className="text-klein underline hover:opacity-80 transition-colors" {...props} />,
+                            blockquote: ({ node, ...props }: any) => <blockquote className="border-l-2 border-ink/30 pl-4 italic my-4" {...props} />,
+                            code: ({ node, ...props }: any) => <code className="bg-ink/10 font-mono text-sm px-1 py-0.5 rounded" {...props} />
+                        }}
+                    >
+                        {body}
+                    </ReactMarkdown>
                 </div>
 
                 {/* Images if any */}
