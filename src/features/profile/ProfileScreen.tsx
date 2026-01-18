@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Parse from '../../services/parseClient';
-import { generateInvite } from '../../services/authService';
+import { generateInvite as genInviteAuth } from '../../services/authService';
+import { saveImageToLibrary as saveImgService } from '../../services/letterService';
+import { ImageGalleryModal } from '../common/ImageGalleryModal';
 
 export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
     const user = Parse.User.current();
@@ -8,6 +10,7 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
     const [inviteCode, setInviteCode] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [generatedCode, setGeneratedCode] = useState('');
+    const [showGallery, setShowGallery] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -35,11 +38,39 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
 
     const handleGenerateInvite = async () => {
         try {
-            const result = await generateInvite();
+            const result = await genInviteAuth();
             setGeneratedCode(result.code);
         } catch (error) {
             console.error(error);
             alert('Failed to generate invite');
+        }
+    };
+
+    const handleGallerySelect = async (image: any) => {
+        console.log('ProfileScreen handleGallerySelect:', image);
+        if (!user) {
+            console.error('No user found');
+            return;
+        }
+        if (!image.file) {
+            console.error('No image file in selection', image);
+            // Fallback: If we have a URL but no File object, we can't set it as PFP easily via Pointer unless we create a new File from URL?
+            // Or maybe 'getRecentImages' failed to populate 'file'?
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // Reuse existing Parse.File
+            user.set('profilePicture', image.file);
+            await user.save();
+            alert('Profile Picture Updated from Library');
+            setShowGallery(false);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update PFP');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -49,11 +80,39 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
 
         setUploading(true);
         try {
+            // Use service to save to library FIRST, then set as PFP
+            const result = await saveImgService(file);
+
+            // Re-fetch to get the file object? No, saveImageToLibrary returns {url, id}.
+            // So we need to create a Parse.File again?
+            // Actually, saveImageToLibrary saves a NEW file.
+            // I can just use the manual logic here just like before, but ALSO save to library?
+            // Or just use the original logic (creates File) and create an Image record pointing to it.
+            // Let's use saveImageToLibrary, but we need the Parse.File object to set to user.
+            // saveImageToLibrary saves the file. 
+            // result.url is available.
+
+            // To be robust:
+            // 1. Save File.
+            // 2. Create Image wrapper.
+            // 3. Set User PFP to File.
+
+            // Replicating saveImageToLibrary logic here to get the File object handle:
             const parseFile = new Parse.File(file.name, file);
             await parseFile.save();
 
+            // Save to Library (Create Image)
+            const ImageObject = Parse.Object.extend('Image');
+            const imageRecord = new ImageObject();
+            imageRecord.set('user', user);
+            imageRecord.set('file', parseFile);
+            imageRecord.setACL(new Parse.ACL(user));
+            await imageRecord.save();
+
+            // Set PFP
             user.set('profilePicture', parseFile);
             await user.save();
+
             alert('Profile Picture Updated');
         } catch (error) {
             console.error(error);
@@ -67,6 +126,13 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
 
     return (
         <div className="fixed inset-0 bg-parchment z-50 flex flex-col p-8 font-mono text-ink overflow-y-auto">
+            {showGallery && (
+                <ImageGalleryModal
+                    onClose={() => setShowGallery(false)}
+                    onSelect={handleGallerySelect}
+                />
+            )}
+
             <header className="flex justify-between items-center border-b border-ink pb-4 mb-8">
                 <h1 className="text-xl font-bold uppercase tracking-widest">Identity Record</h1>
                 <button onClick={onClose} className="text-xs hover:text-klein underline">CLOSE</button>
@@ -75,16 +141,26 @@ export const ProfileScreen = ({ onClose }: { onClose: () => void }) => {
             <div className="max-w-md mx-auto w-full space-y-8">
                 {/* ID Card */}
                 <div className="border border-ink p-6 flex items-start space-x-6">
-                    <div className="relative w-24 h-24 bg-ink/5 border border-ink/20 flex items-center justify-center overflow-hidden">
+                    <div className="relative w-24 h-24 bg-ink/5 border border-ink/20 flex items-center justify-center overflow-hidden group">
                         {pfpUrl ? (
                             <img src={pfpUrl} alt="PFP" className="w-full h-full object-cover" />
                         ) : (
                             <span className="text-4xl opacity-20">?</span>
                         )}
-                        <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 cursor-pointer transition-opacity text-parchment text-[10px] uppercase text-center">
-                            Upload
-                            <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
-                        </label>
+
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center space-y-2">
+                            <label className="cursor-pointer text-parchment text-[10px] uppercase text-center hover:text-klein">
+                                Upload
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                            </label>
+                            <button
+                                onClick={() => setShowGallery(true)}
+                                className="text-parchment text-[10px] uppercase text-center hover:text-klein"
+                            >
+                                Library
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 space-y-2">

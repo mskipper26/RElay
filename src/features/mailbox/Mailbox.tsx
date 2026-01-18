@@ -8,7 +8,25 @@ export const Mailbox = () => {
     const [activeTab, setActiveTab] = React.useState('inbox');
     const { letters, loading, error, refresh } = useMailbox(activeTab) as { letters: any[], loading: boolean, error: any, refresh: () => void };
     const [selectedLetter, setSelectedLetter] = React.useState(null);
+    const [selectedDraft, setSelectedDraft] = React.useState<any>(null); // Draft State
     const [isComposing, setIsComposing] = React.useState(false);
+
+    // Handle when a draft is newly sent or saved
+    const handleComposeSent = () => {
+        setIsComposing(false);
+        setSelectedDraft(null);
+        refresh();
+    };
+
+    // When a letter (or draft) item is clicked
+    const handleLetterClick = (letter: any) => {
+        if (activeTab === 'draft') {
+            setSelectedDraft(letter);
+            setIsComposing(true);
+        } else {
+            setSelectedLetter(letter);
+        }
+    };
 
     if (loading && !letters.length) { // Only show full loader if empty
         return (
@@ -27,7 +45,13 @@ export const Mailbox = () => {
     }
 
     if (isComposing) {
-        return <ComposeScreen onClose={() => setIsComposing(false)} onSent={() => { setIsComposing(false); refresh(); }} />;
+        return (
+            <ComposeScreen
+                onClose={() => { setIsComposing(false); setSelectedDraft(null); }}
+                onSent={handleComposeSent}
+                draft={selectedDraft}
+            />
+        );
     }
 
     if (selectedLetter) {
@@ -61,6 +85,12 @@ export const Mailbox = () => {
                             Sent
                         </button>
                         <button
+                            onClick={() => setActiveTab('draft')}
+                            className={`${activeTab === 'draft' ? 'text-ink font-bold underline' : 'text-ink/40 hover:text-ink'}`}
+                        >
+                            Drafts
+                        </button>
+                        <button
                             onClick={() => setActiveTab('archive')}
                             className={`${activeTab === 'archive' ? 'text-ink font-bold underline' : 'text-ink/40 hover:text-ink'}`}
                         >
@@ -70,7 +100,7 @@ export const Mailbox = () => {
 
                     <div className="flex items-center space-x-4">
                         <button
-                            onClick={() => setIsComposing(true)}
+                            onClick={() => { setSelectedDraft(null); setIsComposing(true); }}
                             className="bg-ink text-parchment px-4 py-1 text-xs font-mono uppercase tracking-widest hover:bg-klein transition-colors"
                         >
                             New Letter
@@ -85,13 +115,16 @@ export const Mailbox = () => {
                     <div className="h-64 flex flex-col items-center justify-center font-mono text-ink/40 space-y-4">
                         <div className="text-4xl text-ink/20">∅</div>
                         <div className="text-xs tracking-widest uppercase">
-                            {activeTab === 'inbox' ? 'No new mail' : activeTab === 'sent' ? 'No sent letters (v2)' : 'Archive empty'}
+                            {activeTab === 'inbox' ? 'No new mail' :
+                                activeTab === 'sent' ? 'No sent letters' :
+                                    activeTab === 'draft' ? 'No open drafts' :
+                                        'Archive empty'}
                         </div>
                     </div>
                 ) : (
                     letters.map((letter) => (
-                        <div key={letter.id} onClick={() => setSelectedLetter(letter)}>
-                            <LetterPreview letter={letter} />
+                        <div key={letter.id} onClick={() => handleLetterClick(letter)}>
+                            <LetterPreview letter={letter} activeTab={activeTab} />
                         </div>
                     ))
                 )}

@@ -113,6 +113,7 @@ export const getSent = async () => {
         images: item.images,
         sender: 'You', // Display as "From: You"
         realSender: item.originalAuthor,
+        recipients: item.recipients, // Pass the array of usernames
         receivedAt: item.createdAt,
         chainIndex: 0,
         originalAuthor: item.originalAuthor
@@ -122,6 +123,79 @@ export const getSent = async () => {
 export const createLetter = async (data) => {
     // data: { subject, body, images, recipients, keepCopy }
     return await Parse.Cloud.run('compose', data);
+};
+
+// --- Image Library ---
+
+export const saveImageToLibrary = async (file) => {
+    // 1. Save the File
+    const parseFile = new Parse.File(file.name, file);
+    await parseFile.save();
+
+    // 2. Create Image Record
+    const ImageObject = Parse.Object.extend('Image');
+    const imageRecord = new ImageObject();
+    imageRecord.set('user', Parse.User.current());
+    imageRecord.set('file', parseFile);
+    imageRecord.setACL(new Parse.ACL(Parse.User.current()));
+
+    await imageRecord.save();
+    return {
+        url: parseFile.url(),
+        id: imageRecord.id
+    };
+};
+
+export const getRecentImages = async (limit = 20) => {
+    const ImageObject = Parse.Object.extend('Image');
+    const query = new Parse.Query(ImageObject);
+    query.equalTo('user', Parse.User.current());
+    query.descending('createdAt');
+    query.limit(limit);
+    const results = await query.find();
+    return results.map(img => ({
+        id: img.id,
+        url: img.get('file').url(),
+        file: img.get('file'), // Return the Parse.File object for reuse
+        createdAt: img.createdAt
+    }));
+};
+
+// ---------------------
+
+export const saveDraft = async ({ draftId, subject, body, images }) => {
+    return await Parse.Cloud.run('saveDraft', {
+        draftId,
+        subject,
+        body,
+        images
+    });
+};
+
+export const getDrafts = async () => {
+    const Draft = Parse.Object.extend('Draft');
+    const query = new Parse.Query(Draft);
+    query.include('content');
+    query.descending('updatedAt');
+    const results = await query.find();
+
+    return results.map(d => {
+        const c = d.get('content');
+        return {
+            id: d.id, // Draft ID for resuming
+            contentId: c.id,
+            subject: c.get('subject'),
+            body: c.get('body'),
+            images: c.get('images'),
+            updatedAt: d.updatedAt,
+            sender: 'Draft',
+            chainIndex: 0
+        };
+    });
+};
+
+export const deleteDraft = async (draftId) => {
+    return await Parse.Cloud.run('deleteDraft', { draftId });
 };
 
 export const forwardLetter = async (letterId, targetUsernames, comment, archiveCopy) => {

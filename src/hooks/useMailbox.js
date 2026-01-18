@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Parse from '../services/parseClient';
-import { getMailbox, getArchive, getFriendRequests, getSent } from '../services/letterService';
+import { getMailbox, getArchive, getFriendRequests, getSent, getDrafts } from '../services/letterService';
 
 export const useMailbox = (type = 'inbox') => {
     const [letters, setLetters] = useState([]);
@@ -32,6 +32,8 @@ export const useMailbox = (type = 'inbox') => {
                 results = [...letters, ...requestLetters].sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
             } else if (type === 'sent') {
                 results = await getSent();
+            } else if (type === 'draft') {
+                results = await getDrafts();
             } else {
                 results = await getArchive();
             }

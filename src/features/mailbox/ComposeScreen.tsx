@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { createLetter, getFriends } from '../../services/letterService';
+import { createLetter, getFriends, saveDraft, deleteDraft } from '../../services/letterService';
 import Parse from '../../services/parseClient';
+import { ImageGalleryModal } from '../common/ImageGalleryModal';
 
-export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent: () => void }) => {
-    const [subject, setSubject] = useState('');
-    const [body, setBody] = useState('');
+export const ComposeScreen = ({ onClose, onSent, draft }: { onClose: () => void; onSent: () => void; draft?: any }) => {
+    const [subject, setSubject] = useState(draft?.subject || '');
+    const [body, setBody] = useState(draft?.body || '');
     const [sending, setSending] = useState(false);
 
     // Social Mode State
-    const [mode, setMode] = useState('HOLD'); // 'HOLD' | 'SEND'
+    const [mode, setMode] = useState('HOLD'); // 'HOLD' (Draft) | 'SEND'
     const [friends, setFriends] = useState<any[]>([]);
     const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
     const [keepCopy, setKeepCopy] = useState(false);
 
     // Attachments
-    const [attachments, setAttachments] = useState<any[]>([]); // File objects
-    const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]); // Previews
+    const [attachmentUrls, setAttachmentUrls] = useState<string[]>(draft?.images || []); // URLs only (from Gallery/History)
+
+    // Gallery
+    const [showGallery, setShowGallery] = useState(false);
 
     useEffect(() => {
         const loadFriends = async () => {
@@ -38,59 +41,99 @@ export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent
         }
     };
 
-    const handleFileSelect = (e: any) => {
-        const files = Array.from(e.target.files);
-        if (files.length + attachments.length > 3) {
+    const handleGallerySelect = (image: any) => {
+        console.log('ComposeScreen handleGallerySelect:', image);
+        if (attachmentUrls.length >= 3) {
             alert('Max 3 attachments allowed.');
             return;
         }
+        // Robust check for object vs string (legacy safety)
+        const url = image.url || (typeof image === 'string' ? image : null);
 
-        const newAttachments = [...attachments, ...files];
-        setAttachments(newAttachments);
-
-        // Generate previews
-        const newUrls = files.map((f: any) => URL.createObjectURL(f));
-        setAttachmentUrls(prev => [...prev, ...newUrls]);
+        if (!url) {
+            console.error('Invalid image selected', image);
+            return;
+        }
+        setAttachmentUrls(prev => [...prev, url]);
+        setShowGallery(false);
     };
 
-    const handleSend = async () => {
-        if (!subject || !body) return;
-        if (mode === 'SEND' && selectedRecipients.length === 0) return;
+    const handleBurn = async () => {
+        if (!draft?.id) return;
+        if (!confirm('Are you sure you want to burn this draft? It cannot be recovered.')) return;
 
         setSending(true);
         try {
-            // 1. Upload Images if any
-            let imageUrls: string[] = [];
-            if (attachments.length > 0) {
-                const results = await Promise.all(attachments.map(async (file) => {
-                    const parseFile = new Parse.File(file.name, file);
-                    await parseFile.save();
-                    return parseFile.url();
-                }));
-                imageUrls = results.filter((u): u is string => !!u);
-            }
+            await deleteDraft(draft.id);
+            onSent(); // Close screen
+        } catch (err) {
+            console.error(err);
+            alert('Failed to burn draft.');
+            setSending(false);
+        }
+    };
 
-            const recipients = mode === 'SEND' ? selectedRecipients : [];
-            // If Holding, keepCopy is implicit/logic handled by backend (Hold = Author Copy).
-            // But our createLetter signature is (subject, body, images, recipients, keepCopy).
-            // If recipients=[], keepCopy is irrelevant (always kept).
-            await createLetter({ subject, body, images: imageUrls, recipients, keepCopy });
-            onSent();
+    const handleAction = async () => {
+        if (!subject || !body) return;
+
+        setSending(true);
+        try {
+            // 1. Prepare Images
+            // attachmentUrls now contains only valid URLs (from Gallery or Draft history)
+            // Filter out any potential garbage
+            const finalImageUrls = attachmentUrls.filter(u => u && typeof u === 'string');
+
+            if (mode === 'HOLD') {
+                // SAVE DRAFT
+                await saveDraft({
+                    draftId: draft?.id,
+                    subject,
+                    body,
+                    images: finalImageUrls
+                });
+                alert('Draft Saved.');
+                onSent();
+            } else {
+                // SEND
+                if (selectedRecipients.length === 0) {
+                    setSending(false);
+                    return;
+                }
+                const recipients = selectedRecipients;
+                await createLetter({
+                    subject,
+                    body,
+                    images: finalImageUrls,
+                    recipients,
+                    keepCopy,
+                    draftId: draft?.id
+                });
+                onSent();
+            }
         } catch (error) {
             console.error(error);
-            alert('Failed to send letter');
+            alert('Failed to process letter');
             setSending(false);
         }
     };
 
     return (
         <div className="fixed inset-0 bg-parchment z-50 flex flex-col p-8 font-mono text-ink">
-            <header className="flex justify-between items-center border-b border-ink pb-4 mb-4">
-                <h1 className="text-xl font-bold uppercase tracking-widest">Compose Letter</h1>
-                <button onClick={onClose} className="text-xs hover:text-klein underline">CANCEL</button>
+            {showGallery && (
+                <ImageGalleryModal
+                    onClose={() => setShowGallery(false)}
+                    onSelect={handleGallerySelect}
+                />
+            )}
+
+            <header className="fixed top-0 left-0 right-0 bg-parchment p-8 z-40 border-b border-ink">
+                <div className="flex justify-between items-center max-w-4xl mx-auto w-full">
+                    <h1 className="text-xl font-bold uppercase tracking-widest">{draft ? 'Edit Draft' : 'Compose Letter'}</h1>
+                    <button onClick={onClose} className="text-xs hover:text-klein underline">CANCEL</button>
+                </div>
             </header>
 
-            <div className="flex-1 flex flex-col space-y-4 max-w-2xl mx-auto w-full overflow-y-auto pb-20">
+            <div className="flex-1 flex flex-col space-y-4 max-w-2xl mx-auto w-full overflow-y-auto pt-24 pb-20">
                 <div className="flex flex-col space-y-2">
                     <label className="text-xs uppercase tracking-widest opacity-60">Subject</label>
                     <input
@@ -102,12 +145,18 @@ export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent
                 </div>
 
                 <div className="flex flex-col space-y-2 min-h-[200px]">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-end">
                         <label className="text-xs uppercase tracking-widest opacity-60">Message</label>
-                        <label className="text-xs uppercase tracking-widest opacity-60 cursor-pointer hover:text-klein">
-                            + Attach Image ({attachments.length}/3)
-                            <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileSelect} disabled={attachments.length >= 3} />
-                        </label>
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => setShowGallery(true)}
+                                className="text-xs uppercase tracking-widest cursor-pointer hover:text-klein flex items-center space-x-1 disabled:opacity-30"
+                                disabled={attachmentUrls.length >= 3}
+                            >
+                                <span>+ Add Image</span>
+                            </button>
+                            <span className="text-xs opacity-40">({attachmentUrls.length}/3)</span>
+                        </div>
                     </div>
 
                     <textarea
@@ -131,17 +180,26 @@ export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent
                 {/* Dispatch Options */}
                 <div className="border-t border-ink pt-6 space-y-6">
                     <div className="flex space-x-4">
+                        {draft && (
+                            <button
+                                onClick={handleBurn}
+                                disabled={sending}
+                                className="flex-1 py-3 text-xs uppercase tracking-widest border border-red-600/50 text-red-600 hover:bg-red-600 hover:text-parchment transition-colors"
+                            >
+                                Burn
+                            </button>
+                        )}
                         <button
                             onClick={() => setMode('HOLD')}
                             className={`flex-1 py-3 text-xs uppercase tracking-widest border transition-colors ${mode === 'HOLD' ? 'bg-ink text-parchment border-ink' : 'border-ink/20 opacity-50 hover:opacity-100'}`}
                         >
-                            Draft & Hold
+                            Save Draft
                         </button>
                         <button
                             onClick={() => setMode('SEND')}
                             className={`flex-1 py-3 text-xs uppercase tracking-widest border transition-colors ${mode === 'SEND' ? 'bg-ink text-parchment border-ink' : 'border-ink/20 opacity-50 hover:opacity-100'}`}
                         >
-                            Send to Friend
+                            Send
                         </button>
                     </div>
 
@@ -156,7 +214,6 @@ export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent
                                         </div>
                                     )}
                                     {friends.map(f => {
-                                        // Friend is a POJO now, profilePicture is a URL string
                                         const pfp = f.profilePicture;
                                         const isSelected = selectedRecipients.includes(f.username);
                                         return (
@@ -177,24 +234,20 @@ export const ComposeScreen = ({ onClose, onSent }: { onClose: () => void; onSent
                                 </div>
                             </div>
 
-                            <label className="flex items-center space-x-3 cursor-pointer group mt-4">
-                                <div className={`w-4 h-4 border border-ink flex items-center justify-center transition-colors ${keepCopy ? 'bg-klein border-klein' : 'bg-transparent'}`}>
-                                    {keepCopy && <span className="text-parchment text-[10px]">✓</span>}
-                                </div>
-                                <input type="checkbox" checked={keepCopy} onChange={e => setKeepCopy(e.target.checked)} className="hidden" />
-                                <span className="text-xs uppercase tracking-widest group-hover:text-klein transition-colors">Keep a Copy in Archive?</span>
-                            </label>
+
                         </div>
                     )}
 
                     <div className="flex justify-end pt-4">
-                        <button
-                            onClick={handleSend}
-                            disabled={sending || (mode === 'SEND' && selectedRecipients.length === 0)}
-                            className="bg-klein text-parchment px-12 py-4 text-sm tracking-widest uppercase hover:opacity-90 disabled:opacity-50 shadow-lg transition-transform active:scale-95"
-                        >
-                            {sending ? 'Processing...' : (mode === 'SEND' ? 'Send Correspondence' : 'Sign & Hold')}
-                        </button>
+                        <div className="flex justify-end pt-4">
+                            <button
+                                onClick={handleAction}
+                                disabled={sending || (mode === 'SEND' && selectedRecipients.length === 0)}
+                                className="bg-klein text-parchment px-12 py-4 text-sm tracking-widest uppercase hover:opacity-90 disabled:opacity-50 shadow-lg transition-transform active:scale-95"
+                            >
+                                {sending ? 'Processing...' : (mode === 'SEND' ? 'Send Correspondence' : 'Save Draft')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

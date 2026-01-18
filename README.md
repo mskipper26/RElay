@@ -1,52 +1,68 @@
-# RE:LAY (LetterApp)
+# RE:LAY Protocol Specification
 
-RE:LAY is a slow-social networking application built around the concept of digital letters. It emphasizes meaningful connection over instant gratification, featuring a "Terminal Scriptorium" aesthetic.
+## Overview
 
-## Features
+RE:LAY is a decentralized-style social networking application designed to emphasize active reading, intentional composition, and meaningful custody of digital correspondence. Unlike instant messaging platforms, RE:LAY utilizes a slower, custody-based model where users "hold" letters, annotate them, and forward them to a limited number of recipients, creating a traceable lineage of thought.
 
-### 📬 The Mailbox
-- **Inbox**: Receive digital letters from friends. Letters are held in custody and can be burned or archived.
-- **Sent**: A permanent record of your authored content. (Read-only view).
-- **Archive**: Keep up to 10 letters permanently. Archived letters update live if new comments are added to the chain.
+## Core Architecture
 
-### ✍️ Composition & Forwarding
-- **Compose**: Write letters with rich text (Markdown support) and attach up to 3 images.
-- **Forwarding**: Forward received letters to up to 3 friends. Add your own annotation/comment to the chain.
-- **Chain History**: View the full lineage of a letter, including who forwarded it and their annotations.
+The application implements a split-model architecture to separate content from delivery:
 
-### 🤝 Social Network
-- **Invite-Only**: New users need a unique invite code to join.
-- **Friend System**: Connect with previous senders directly from a letter.
-- **Profiles**: View friend profiles, referral stats, and manage your network.
+*   **LetterContent**: Immutable storage of the message body, subject, and attachments. Contains a mutable, append-only history of annotations (comments) added as the content traverses the network.
+*   **Letter (Envelope)**: A delivery vehicle that points to a `LetterContent` object. Represents a user's custody of a message. Envelopes are unique to each recipient, allowing for individual state management (Read/Unread, Archived, Burnt).
 
-### ⚡ Live Wire
-- **Real-time Chat**: A shared live chat feed for ephemeral communication.
-- **Smart Scroll**: Auto-scrolls for new messages only when you are at the bottom of the feed.
+### Data Retention Model
 
-## Technology Stack
+RE:LAY enforces a strict "custody or destruction" policy:
+*   **Inbox**: Holds incoming correspondence.
+*   **Archive**: A limited storage slot (default 10) for saving letters permanently. Archived letters remain live, receiving updates if the content chain continues elsewhere.
+*   **Burn**: Users must explicitly destroy (Burn) letters they do not wish to Archive or Forward.
 
-- **Frontend**: React (Vite), TailwindCSS, Framer Motion
-- **Backend**: Parse Server (Node.js/Express)
-- **Database**: MongoDB (with GridFS for image storage)
-- **Real-time**: Parse LiveQuery (WebSocket)
+## Feature Set
 
-## Getting Started
+### Mailbox Management
+*   **Inbox**: Primary queue for incoming letters.
+*   **Sent**: A comprehensive log of all outbound correspondence. Displays recipient manifests per letter. Includes Drafts filtering (Drafts do not appear in Sent).
+*   **Archive**: Permanent long-term storage for high-value correspondence.
+*   **Drafts**: Local workspace for composing letters. Supports saving work-in-progress without transmission.
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+### Composition Engine
+*   **Rich Text**: Markdown-enabled editor for expressive writing.
+*   **Media Integration**:
+    *   **Image Gallery**: Centralized asset management. Images uploaded once are stored in a personal library for reuse.
+    *   **Attachments**: Support for up to 3 high-resolution images per letter.
+*   **Recipient Selection**: Multi-select interface with friend network integration.
 
-2.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
+### Social Graph
+*   **Invite System**: Strict invite-only access control. Users generate codes to bring new members into the network.
+*   **Connection Protocol**: Users can send Friend Requests directly from the context of a received letter (e.g., connecting with a friend-of-a-friend who forwarded a letter).
+*   **Profile Management**: Public profiles displaying referral statistics and user avatars.
 
-3.  **Build for Production**:
-    ```bash
-    npm run build
-    ```
+### Live Wire
+*   A real-time, ephemeral communication channel for immediate network synchronization.
+*   Features "Smart Scroll" technology to maintain context during active conversations.
+
+### Network Dynamics
+*   **Exponential Propagation**: The protocol is designed for viral, yet controlled, dissemination. As each recipient can forward a letter to multiple new contacts (default limit: 3), a single correspondence can rapidly evolve into an exponentially expanding tree of thought. This allows ideas to traverse the social graph organically, creating a rich, multi-branch lineage from a single origin.
+
+## Technical Specifications
+
+### Frontend
+*   **Framework**: React 18 (Vite)
+*   **Styling**: TailwindCSS (Custom "Terminal Scriptorium" design system)
+*   **State Management**: React Hooks + Parse LiveQuery
+*   **Animation**: Framer Motion
+
+### Backend
+*   **Server Runtime**: Parse Server (Node.js/Express)
+*   **Database**: MongoDB (Structure-aware document storage)
+*   **File Storage**: GridFS (for binary image data)
+*   **Real-time Layer**: WebSocket-based LiveQuery Server
+
+### Security Environment
+*   **Access Control Lists (ACLs)**: Granular per-object permissions ensuring content is visible only to the author and current chain of recipients.
+*   **Class Level Permissions (CLPs)**: Strict schema enforcement preventing unauthorized API access.
 
 ## License
 
-Private / Proprietary.
+Proprietary Software. Internal Use Only.

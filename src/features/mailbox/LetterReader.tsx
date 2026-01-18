@@ -205,21 +205,34 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                         <span className="opacity-50 uppercase">Originator:</span>
                         <span className="font-bold">{originalAuthor || 'UNKNOWN'}</span>
                     </div>
-                    {previousSender && (
+                    {isSent ? (
+                        <div className="flex justify-between">
+                            <span className="opacity-50 uppercase">Sent To:</span>
+                            <span className="font-bold text-klein truncate ml-4 text-right">
+                                {letter.recipients && letter.recipients.length > 0
+                                    ? letter.recipients.join(', ')
+                                    : 'Unknown'}
+                            </span>
+                        </div>
+                    ) : (
                         <>
+                            {previousSender && (
+                                <>
+                                    <div className="flex justify-between">
+                                        <span className="opacity-50 uppercase">Forwarded By:</span>
+                                        <span className="font-bold text-ink">{previousSender}</span>
+                                    </div>
+                                    <div className="flex justify-end pr-1 text-ink/30 text-[10px] leading-3">
+                                        ↓
+                                    </div>
+                                </>
+                            )}
                             <div className="flex justify-between">
-                                <span className="opacity-50 uppercase">Forwarded By:</span>
-                                <span className="font-bold text-ink">{previousSender}</span>
-                            </div>
-                            <div className="flex justify-end pr-1 text-ink/30 text-[10px] leading-3">
-                                ↓
+                                <span className="opacity-50 uppercase">Received From:</span>
+                                <span className="font-bold text-klein">{sender || 'SELF'}</span>
                             </div>
                         </>
                     )}
-                    <div className="flex justify-between">
-                        <span className="opacity-50 uppercase">Received From:</span>
-                        <span className="font-bold text-klein">{sender || 'SELF'}</span>
-                    </div>
                 </div>
 
                 <h1 className="text-4xl font-serif italic mb-8">{subject}</h1>
