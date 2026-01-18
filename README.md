@@ -1,4 +1,4 @@
-# RE:LAY Protocol Specification
+# RE:LAY Specification
 
 ## Overview
 
