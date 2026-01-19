@@ -22,6 +22,10 @@ export const generateInvite = async () => {
     return await Parse.Cloud.run('generateInvite');
 };
 
+export const checkInviteCode = async (code) => {
+    return await Parse.Cloud.run('checkInviteCode', { code });
+};
+
 export const login = async (username, password) => {
     try {
         const user = await Parse.User.logIn(username, password);

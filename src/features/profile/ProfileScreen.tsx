@@ -3,6 +3,7 @@ import Parse from '../../services/parseClient';
 import { generateInvite as genInviteAuth } from '../../services/authService';
 import { saveImageToLibrary as saveImgService, getProfileStats } from '../../services/letterService';
 import { ImageGalleryModal } from '../common/ImageGalleryModal';
+import { NetworkTreeScreen } from '../network/NetworkTreeScreen';
 
 export const ProfileScreen = ({ onClose, targetUser }: { onClose: () => void, targetUser?: any }) => {
     const currentUser = Parse.User.current();
@@ -14,8 +15,10 @@ export const ProfileScreen = ({ onClose, targetUser }: { onClose: () => void, ta
     const [uploading, setUploading] = useState(false);
     const [generatedCode, setGeneratedCode] = useState('');
     const [showGallery, setShowGallery] = useState(false);
+
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [bioText, setBioText] = useState('');
+    const [showNetwork, setShowNetwork] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -208,7 +211,20 @@ export const ProfileScreen = ({ onClose, targetUser }: { onClose: () => void, ta
                         </div>
                     </div>
                 )}
+
+                {/* Network Action (Only Me) */}
+                {isMe && (
+                    <div className="flex justify-center mt-6">
+                        <button
+                            onClick={() => setShowNetwork(true)}
+                            className="text-ink/60 border-b border-ink/30 hover:text-ink hover:border-ink transition-colors font-mono text-xs uppercase tracking-widest pb-1"
+                        >
+                            View Lineage Tree ({stats.referrals})
+                        </button>
+                    </div>
+                )}
             </div>
+            {showNetwork && <NetworkTreeScreen onClose={() => setShowNetwork(false)} />}
         </div>
     );
 };

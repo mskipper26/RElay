@@ -250,6 +250,10 @@ export const respondToFriendRequest = async (requestId, action) => {
     return await Parse.Cloud.run('respondToFriendRequest', { requestId, action });
 };
 
+export const checkFriendStatus = async (targetUserId) => {
+    return await Parse.Cloud.run('checkFriendStatus', { targetUserId });
+};
+
 export const getFriendRequests = async () => {
     const user = Parse.User.current();
     if (!user) return [];

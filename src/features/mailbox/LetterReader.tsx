@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Parse from '../../services/parseClient';
-import { forwardLetter, burnLetter, getComments, getFriends, sendFriendRequest, respondToFriendRequest, markAsRead } from '../../services/letterService';
+import { forwardLetter, burnLetter, getComments, getFriends, sendFriendRequest, respondToFriendRequest, markAsRead, checkFriendStatus } from '../../services/letterService';
 
 interface LetterReaderProps {
     letter: any;
@@ -17,6 +17,7 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
     const [commentText, setCommentText] = useState('');
     const [processing, setProcessing] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [requestSent, setRequestSent] = useState(false);
 
     // Comments state
     const [comments, setComments] = useState<any[]>([]);
@@ -57,6 +58,16 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                 console.error("Failed to load friends", err);
             } finally {
                 setLoadingFriends(false);
+            }
+
+            // Check Friend Status (if needed)
+            if (previousSenderId && !isSent && !isArchived) {
+                try {
+                    const status = await checkFriendStatus(previousSenderId);
+                    if (status.requestSent) setRequestSent(true);
+                } catch (e) {
+                    // Ignore error (e.g. user not found)
+                }
             }
         };
         loadData();
@@ -128,6 +139,7 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
 
         try {
             await sendFriendRequest(previousSenderId);
+            setRequestSent(true);
             alert('Friend Request Sent!');
         } catch (err: any) {
             alert('Failed: ' + err.message);
@@ -225,7 +237,9 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                             <span className="opacity-50 uppercase">Sent To:</span>
                             <span className="font-bold text-klein truncate ml-4 text-right">
                                 {letter.recipients && letter.recipients.length > 0
-                                    ? letter.recipients.join(', ')
+                                    ? (typeof letter.recipients[0] === 'string'
+                                        ? letter.recipients.join(', ')
+                                        : letter.recipients.map((r: any) => `${r.username}${r.read ? ' (Read)' : ''}`).join(', '))
                                     : 'Unknown'}
                             </span>
                         </div>
@@ -346,7 +360,7 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                                 >
                                     {processing ? '...' : 'Burn'}
                                 </button>
-                                {canConnect && (
+                                {canConnect && !requestSent && (
                                     <button
                                         onClick={handleConnect}
                                         className="text-xs text-klein tracking-widest uppercase hover:bg-klein/5 px-4 py-2 border border-klein/20 hover:border-klein transition-colors"

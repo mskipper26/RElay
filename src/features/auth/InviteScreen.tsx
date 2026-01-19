@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { redeemInvite, login } from '../../services/authService';
+import { redeemInvite, login, checkInviteCode } from '../../services/authService';
 
 export const InviteScreen = ({ onLogin }) => {
     const [step, setStep] = useState('code'); // 'code' | 'register' | 'login'
@@ -10,11 +10,22 @@ export const InviteScreen = ({ onLogin }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleCodeSubmit = (e) => {
+    const handleCodeSubmit = async (e) => {
         e.preventDefault();
-        if (inviteCode.trim().length > 0) {
-            setStep('register');
+        const code = inviteCode.trim();
+        if (code.length > 0) {
+            setLoading(true);
             setError('');
+            try {
+                // Validate code before moving to next step
+                await checkInviteCode(code);
+                setStep('register');
+            } catch (err) {
+                console.error("Invite Check Failed", err);
+                setError('INVALID OR USED CODE');
+            } finally {
+                setLoading(false);
+            }
         } else {
             setError('INVITE CODE REQUIRED');
         }
@@ -90,7 +101,7 @@ export const InviteScreen = ({ onLogin }) => {
                                 type="submit"
                                 className="w-full border border-ink py-3 hover:bg-ink hover:text-parchment transition-colors uppercase font-bold text-sm tracking-wider"
                             >
-                                Start Handshake
+                                {loading ? 'VERIFYING...' : 'Start Handshake'}
                             </button>
                         </motion.form>
                     ) : step === 'login' ? (
