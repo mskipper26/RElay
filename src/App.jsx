@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Mailbox } from './features/mailbox/Mailbox';
+import { useMailbox } from './hooks/useMailbox';
 import { InviteScreen } from './features/auth/InviteScreen';
 import { ChatBox } from './features/chat/ChatBox';
 import Parse from 'parse';
@@ -9,6 +10,14 @@ import { FriendListScreen } from './features/profile/FriendListScreen';
 function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('mailbox'); // mailbox | profile | friends
+
+  // Global Inbox Monitor for Tab Title
+  const { letters: inboxLetters } = useMailbox('inbox');
+  const unreadCount = inboxLetters ? inboxLetters.filter(l => !l.read && l.type !== 'request').length : 0;
+
+  useEffect(() => {
+    document.title = unreadCount > 0 ? `(${unreadCount}) RE:lay` : 'RE:lay';
+  }, [unreadCount]);
 
   // Listen for login/logout changes
   useEffect(() => {
