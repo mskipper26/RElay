@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Parse from '../../services/parseClient';
-import { forwardLetter, burnLetter, getComments, getFriends, sendFriendRequest, respondToFriendRequest } from '../../services/letterService';
+import { forwardLetter, burnLetter, getComments, getFriends, sendFriendRequest, respondToFriendRequest, markAsRead } from '../../services/letterService';
 
 interface LetterReaderProps {
     letter: any;
@@ -60,6 +60,12 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
             }
         };
         loadData();
+
+
+        // Mark as Read if not already (and not sent/archived/request)
+        if (!letter.read && !isSent && letter.type !== 'request') {
+            markAsRead(id);
+        }
     }, [contentId]);
 
     const isFriend = friends.some(f => f.username === previousSender);
@@ -149,11 +155,19 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                                 {friends.map(f => {
                                     const pfp = f.profilePicture;
                                     const isSelected = selectedRecipients.includes(f.username);
+                                    const isSender = f.username === previousSender || f.username === sender;
+
                                     return (
                                         <button
                                             key={f.id}
-                                            onClick={() => toggleRecipient(f.username)}
-                                            className={`flex items-center space-x-2 px-3 py-2 text-xs font-mono border transition-all ${isSelected ? 'bg-klein text-parchment border-klein shadow-md' : 'border-ink/30 hover:border-klein bg-parchment'}`}
+                                            onClick={() => !isSender && toggleRecipient(f.username)}
+                                            disabled={isSender}
+                                            className={`flex items-center space-x-2 px-3 py-2 text-xs font-mono border transition-all ${isSender
+                                                ? 'opacity-20 cursor-not-allowed border-ink/10 bg-ink/5'
+                                                : isSelected
+                                                    ? 'bg-klein text-parchment border-klein shadow-md'
+                                                    : 'border-ink/30 hover:border-klein bg-parchment'
+                                                }`}
                                         >
                                             {pfp ? (
                                                 <img src={pfp} className={`w-5 h-5 object-cover ${!isSelected && 'grayscale'}`} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFriends } from '../../services/letterService';
+import { getFriends, redeemFriendCode } from '../../services/letterService';
 import Parse from '../../services/parseClient';
 
 import { ProfileScreen } from './ProfileScreen';
@@ -8,6 +8,26 @@ export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
     const [friends, setFriends] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedFriend, setSelectedFriend] = useState<any>(null);
+    const [connectCode, setConnectCode] = useState('');
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    const handleConnect = async () => {
+        if (!connectCode.trim()) return;
+        setIsConnecting(true);
+        try {
+            const result = await redeemFriendCode(connectCode.trim().toUpperCase());
+            alert(result.message);
+            setConnectCode('');
+            // Reload friends
+            const f = await getFriends();
+            setFriends(f);
+        } catch (err: any) {
+            console.error(err);
+            alert('Connection Failed: ' + err.message);
+        } finally {
+            setIsConnecting(false);
+        }
+    };
 
     useEffect(() => {
         const load = async () => {
@@ -58,7 +78,25 @@ export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
                 <button onClick={onClose} className="text-xs hover:text-klein underline">CLOSE</button>
             </header>
 
-            <div className="max-w-2xl mx-auto w-full">
+            <div className="max-w-2xl mx-auto w-full space-y-8">
+                {/* Connect Section */}
+                <div className="bg-ink/5 p-4 flex items-center space-x-4 border border-ink/10">
+                    <input
+                        type="text"
+                        value={connectCode}
+                        onChange={(e) => setConnectCode(e.target.value)}
+                        placeholder="ENTER INVITE CODE"
+                        className="flex-1 bg-transparent border-b border-ink/30 py-2 text-sm font-mono focus:outline-none focus:border-klein uppercase tracking-wider placeholder:text-ink/30"
+                    />
+                    <button
+                        onClick={handleConnect}
+                        disabled={isConnecting || !connectCode}
+                        className="bg-ink text-parchment px-4 py-2 text-[10px] uppercase tracking-widest hover:bg-klein disabled:opacity-50 transition-colors"
+                    >
+                        {isConnecting ? '...' : 'Connect'}
+                    </button>
+                </div>
+
                 {loading ? (
                     <div className="text-center opacity-50 text-xs uppercase tracking-widest">Fetching Network...</div>
                 ) : friends.length === 0 ? (
@@ -82,7 +120,17 @@ export const FriendListScreen = ({ onClose }: { onClose: () => void }) => {
                                         )}
                                     </div>
                                     <div className="flex-1">
-                                        <div className="font-bold text-sm tracking-wide">{friend.username}</div>
+                                        <div className="font-bold text-sm tracking-wide flex items-center space-x-2">
+                                            <span>{friend.username}</span>
+                                            {friend.type && (
+                                                <span className={`text-[8px] px-1 py-0.5 border rounded uppercase ${friend.type === 'ref' ? 'border-ink/30 text-ink/50' :
+                                                        friend.type === 'code' ? 'border-klein text-klein' :
+                                                            'border-ink text-ink'
+                                                    }`}>
+                                                    {friend.type}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="text-[10px] uppercase opacity-50 mt-1">
                                             Referrals: {friend.referralCount || 0}
                                         </div>

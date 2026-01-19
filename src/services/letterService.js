@@ -16,6 +16,7 @@ export const getMailbox = async () => {
 
     const query = Parse.Query.or(q1, q2);
     query.equalTo('recipient', user);
+    query.notEqualTo('isBurned', true);
 
     query.include('content');
     query.include('sender');
@@ -47,7 +48,10 @@ export const getMailbox = async () => {
                     previousSenderId: (prev && prev.id) ? prev.id : null,
                     receivedAt: l.createdAt,
                     chainIndex: l.get('chainIndex') || 1,
-                    originalAuthor: (orig && orig.get) ? orig.get('username') : 'Unknown'
+                    receivedAt: l.createdAt,
+                    chainIndex: l.get('chainIndex') || 1,
+                    originalAuthor: (orig && orig.get) ? orig.get('username') : 'Unknown',
+                    read: !!l.get('read') // Permissive check (truthy is enough)
                 };
             } catch (e) {
                 console.error('Error parsing letter:', e);
@@ -73,6 +77,7 @@ export const getArchive = async () => {
 
     const query = Parse.Query.or(q1, q2);
     query.equalTo('recipient', user);
+    query.notEqualTo('isBurned', true);
 
     query.include('content');
     query.include('sender');
@@ -95,7 +100,9 @@ export const getArchive = async () => {
                 sender: l.get('sender').get('username'),
                 receivedAt: l.createdAt,
                 chainIndex: l.get('chainIndex') || 1,
-                originalAuthor: orig ? orig.get('username') : 'Unknown'
+                chainIndex: l.get('chainIndex') || 1,
+                originalAuthor: orig ? orig.get('username') : 'Unknown',
+                read: !!l.get('read')
             };
         });
 };
@@ -190,9 +197,18 @@ export const getDrafts = async () => {
             images: c.get('images'),
             updatedAt: d.updatedAt,
             sender: 'Draft',
-            chainIndex: 0
+            chainIndex: 0,
+            read: c.get('read') === 'read' // Actually drafts don't have read status on content usually, but checking.
         };
     });
+};
+
+export const markAsRead = async (letterId) => {
+    const Letter = Parse.Object.extend('Letter');
+    const letter = new Letter();
+    letter.id = letterId;
+    letter.set('read', 'read');
+    await letter.save();
 };
 
 export const deleteDraft = async (draftId) => {
@@ -258,4 +274,8 @@ export const getFriendRequests = async () => {
 
 export const getProfileStats = async (targetUserId = null) => {
     return await Parse.Cloud.run('getProfileStats', { targetUserId });
+};
+
+export const redeemFriendCode = async (code) => {
+    return await Parse.Cloud.run('redeemFriendCode', { code });
 };

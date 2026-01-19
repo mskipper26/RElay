@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMailbox } from '../../hooks/useMailbox';
+import { deleteDraft, burnLetter } from '../../services/letterService';
 import LetterPreview from './LetterPreview';
 import { ComposeScreen } from './ComposeScreen';
 import { LetterReader } from './LetterReader';
@@ -25,6 +26,32 @@ export const Mailbox = () => {
             setIsComposing(true);
         } else {
             setSelectedLetter(letter);
+        }
+    };
+
+    const handleDelete = async (e: React.MouseEvent, letter: any) => {
+        e.stopPropagation();
+        const isDraft = activeTab === 'draft';
+        const isArchive = activeTab === 'archive';
+
+        if (!isDraft && !isArchive) return;
+
+        const confirmMsg = isDraft
+            ? "Delete this draft permanently?"
+            : "Burn this archived letter? It will be removed from your view.";
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            if (isDraft) {
+                await deleteDraft(letter.id);
+            } else {
+                await burnLetter(letter.id);
+            }
+            refresh();
+        } catch (err) {
+            console.error('Delete failed', err);
+            alert('Failed to delete item.');
         }
     };
 
@@ -58,7 +85,7 @@ export const Mailbox = () => {
         return (
             <LetterReader
                 letter={selectedLetter}
-                onClose={() => setSelectedLetter(null)}
+                onClose={() => { setSelectedLetter(null); refresh(); }}
                 onActionComplete={() => { setSelectedLetter(null); refresh(); }}
                 isArchived={activeTab === 'archive'}
                 isSent={activeTab === 'sent'}
@@ -124,7 +151,15 @@ export const Mailbox = () => {
                 ) : (
                     letters.map((letter) => (
                         <div key={letter.id} onClick={() => handleLetterClick(letter)}>
-                            <LetterPreview letter={letter} activeTab={activeTab} />
+                            <LetterPreview
+                                letter={letter}
+                                activeTab={activeTab}
+                                onDelete={
+                                    (activeTab === 'draft' || activeTab === 'archive')
+                                        ? (e) => handleDelete(e, letter)
+                                        : undefined
+                                }
+                            />
                         </div>
                     ))
                 )}

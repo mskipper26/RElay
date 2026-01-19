@@ -176,7 +176,7 @@ export const ProfileScreen = ({ onClose, targetUser }: { onClose: () => void, ta
                                 <div className="text-xl font-bold">{stats.impressions}</div>
                             </div>
                             <div>
-                                <div className="text-[10px] uppercase tracking-widest opacity-50">Ref</div>
+                                <div className="text-[10px] uppercase tracking-widest opacity-50">Referrals</div>
                                 <div className="text-xl font-bold">{stats.referrals}</div>
                             </div>
                         </div>

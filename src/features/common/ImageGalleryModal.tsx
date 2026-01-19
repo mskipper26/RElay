@@ -7,6 +7,7 @@ interface ImageGalleryModalProps {
 }
 
 export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ onClose, onSelect }) => {
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [images, setImages] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
@@ -80,13 +81,24 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ onClose, o
                                 <div
                                     key={img.id}
                                     className="aspect-square border border-ink/10 relative group cursor-pointer overflow-hidden"
-                                    onClick={() => onSelect(img)}
                                 >
-                                    <img src={img.url} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0" />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                        <span className="opacity-0 group-hover:opacity-100 bg-parchment px-3 py-1 text-xs uppercase tracking-widest shadow-sm transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                    <img src={img.url} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0" onClick={() => onSelect(img)} />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex flex-col items-center justify-center space-y-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => onSelect(img)}
+                                            className="bg-parchment px-4 py-1.5 text-xs uppercase tracking-widest shadow-sm transform translate-y-4 group-hover:translate-y-0 transition-all hover:bg-klein hover:text-white"
+                                        >
                                             Select
-                                        </span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setExpandedImage(img.url);
+                                            }}
+                                            className="bg-ink text-parchment px-4 py-1.5 text-xs uppercase tracking-widest shadow-sm transform translate-y-4 group-hover:translate-y-0 transition-all delay-75 hover:bg-klein"
+                                        >
+                                            Expand
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -100,6 +112,28 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ onClose, o
                     )}
                 </div>
             </div>
+
+            {/* Lightbox Overlay */}
+            {expandedImage && (
+                <div
+                    className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-8 backdrop-blur-md animate-in fade-in duration-200"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <img
+                        src={expandedImage}
+                        className="max-w-full max-h-full object-contain shadow-2xl"
+                    />
+                    <button
+                        onClick={() => setExpandedImage(null)}
+                        className="absolute top-6 right-6 text-white text-4xl hover:text-klein transition-colors"
+                    >
+                        &times;
+                    </button>
+                    <div className="absolute bottom-6 text-white/50 text-xs font-mono uppercase tracking-widest">
+                        Click anywhere to close
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
