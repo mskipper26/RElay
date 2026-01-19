@@ -110,10 +110,23 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
     };
 
     const handleBurn = async () => {
-        if (!confirm('Are you sure you want to BURN this letter?')) return;
+        // if (!confirm('Are you sure you want to BURN this letter?')) return;
+        // setProcessing(true);
+        // try {
+        //     await burnLetter(id);
+        //     onActionComplete();
+        // } catch (error: any) {
+        //     console.error(error);
+        //     alert('Failed to burn: ' + error.message);
+        //     setProcessing(false);
+        // }
+        setMode('BURN');
+    };
+
+    const confirmBurn = async () => {
         setProcessing(true);
         try {
-            await burnLetter(id);
+            await burnLetter(id, commentText);
             onActionComplete();
         } catch (error: any) {
             console.error(error);
@@ -209,6 +222,42 @@ export const LetterReader = ({ letter, onClose, onActionComplete, isArchived = f
                             className="w-full bg-ink text-parchment py-3 text-xs tracking-widest uppercase mt-4 hover:opacity-90 disabled:opacity-50"
                         >
                             {processing ? 'Sending...' : 'Confirm Forward'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        );
+    }
+
+    if (mode === 'BURN') {
+        return (
+            <div className="fixed inset-0 bg-parchment/95 z-50 flex items-center justify-center p-4">
+                <div className="bg-parchment border border-red-900 p-8 max-w-md w-full shadow-2xl relative">
+                    <button onClick={() => setMode('READ')} className="absolute top-4 right-4 text-xs hover:text-red-900/50">CANCEL</button>
+                    <h2 className="text-lg font-bold uppercase tracking-widest mb-6 text-red-900">Burn Letter</h2>
+
+                    <div className="space-y-6">
+                        <div className="text-sm font-serif italic opacity-70">
+                            Burning this letter will remove it from your possession permanently. You may leave a final annotation before it turns to ash.
+                        </div>
+
+                        <div>
+                            <label className="text-xs uppercase tracking-widest opacity-60 block mb-1">Final Annotation (Optional)</label>
+                            <textarea
+                                className="w-full bg-red-50/50 border border-red-900/20 p-2 font-serif text-sm h-24 outline-none resize-none focus:border-red-900/50 transition-colors"
+                                placeholder="Any last words..."
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                            />
+                        </div>
+
+                        <button
+                            onClick={confirmBurn}
+                            disabled={processing}
+                            className="w-full bg-red-900 text-parchment py-3 text-xs tracking-widest uppercase mt-4 hover:opacity-90 disabled:opacity-50"
+                        >
+                            {processing ? 'Burning...' : 'Confirm Burn'}
                         </button>
                     </div>
                 </div>

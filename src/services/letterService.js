@@ -43,6 +43,7 @@ export const getMailbox = async () => {
                     subject: content.get('subject'),
                     body: content.get('body'),
                     images: content.get('images'),
+                    commentCount: content.get('commentCount') || 0,
                     sender: sender.get('username'),
                     previousSender: (prev && prev.get) ? prev.get('username') : null,
                     previousSenderId: (prev && prev.id) ? prev.id : null,
@@ -118,6 +119,7 @@ export const getSent = async () => {
         subject: item.subject,
         body: item.body,
         images: item.images,
+        commentCount: item.commentCount || 0,
         sender: 'You', // Display as "From: You"
         realSender: item.originalAuthor,
         recipients: item.recipients, // Pass the array of usernames
@@ -224,8 +226,8 @@ export const forwardLetter = async (letterId, targetUsernames, comment, archiveC
     });
 };
 
-export const burnLetter = async (letterId) => {
-    return await Parse.Cloud.run('burn', { letterId });
+export const burnLetter = async (letterId, comment) => {
+    return await Parse.Cloud.run('burn', { letterId, commentText: comment });
 };
 
 export const getComments = async (contentId) => {

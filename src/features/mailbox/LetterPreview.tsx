@@ -87,9 +87,14 @@ export const LetterPreview = ({ letter, activeTab, onDelete }: { letter: any; ac
                     </span>
                     <div className="flex items-center space-x-4">
                         {activeTab !== 'draft' && (
-                            <span>
-                                CHAIN: {chainCount}
-                            </span>
+                            <div className="flex flex-col items-end">
+                                <span>CHAIN: {chainCount}</span>
+                                {letter.commentCount > 0 && (
+                                    <span className="text-[10px] text-ink/40">
+                                        {letter.commentCount} Note{letter.commentCount !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
                         )}
                         {onDelete && (
                             <button
@@ -120,7 +125,7 @@ export const LetterPreview = ({ letter, activeTab, onDelete }: { letter: any; ac
                     {body && body.length > 20 && <span>...</span>}
                 </div>
             </div>
-        </motion.div>
+        </motion.div >
     );
 };
 
