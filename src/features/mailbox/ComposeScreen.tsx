@@ -195,18 +195,34 @@ export const ComposeScreen = ({ onClose, onSent, draft }: { onClose: () => void;
                                 Burn
                             </button>
                         )}
-                        <button
-                            onClick={() => setMode('HOLD')}
-                            className={`flex-1 py-3 text-xs uppercase tracking-widest border transition-colors ${mode === 'HOLD' ? 'bg-ink text-parchment border-ink' : 'border-ink/20 opacity-50 hover:opacity-100'}`}
-                        >
-                            Save Draft
-                        </button>
-                        <button
-                            onClick={() => setMode('SEND')}
-                            className={`flex-1 py-3 text-xs uppercase tracking-widest border transition-colors ${mode === 'SEND' ? 'bg-ink text-parchment border-ink' : 'border-ink/20 opacity-50 hover:opacity-100'}`}
-                        >
-                            Send
-                        </button>
+                        {/* Toggle Switch */}
+                        <div className="flex items-center justify-center space-x-6 py-2">
+                            <span
+                                onClick={() => setMode('HOLD')}
+                                className={`text-xs uppercase tracking-widest cursor-pointer transition-colors ${mode === 'HOLD' ? 'font-bold text-ink' : 'text-ink/40'}`}
+                            >
+                                Save Draft
+                            </span>
+
+                            <button
+                                onClick={() => setMode(mode === 'HOLD' ? 'SEND' : 'HOLD')}
+                                className="w-14 h-7 bg-ink/10 rounded-full relative border border-ink/20 focus:outline-none transition-colors hover:border-ink/40"
+                            >
+                                <div
+                                    className={`absolute top-1 w-5 h-5 bg-ink rounded-full shadow-sm transition-all duration-300 ease-in-out flex items-center justify-center ${mode === 'SEND' ? 'left-8' : 'left-1'
+                                        }`}
+                                >
+                                    <div className="w-1.5 h-1.5 bg-parchment rounded-full" />
+                                </div>
+                            </button>
+
+                            <span
+                                onClick={() => setMode('SEND')}
+                                className={`text-xs uppercase tracking-widest cursor-pointer transition-colors ${mode === 'SEND' ? 'font-bold text-ink' : 'text-ink/40'}`}
+                            >
+                                Send Letter
+                            </span>
+                        </div>
                     </div>
 
                     {mode === 'SEND' && (

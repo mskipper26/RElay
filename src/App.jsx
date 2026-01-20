@@ -6,6 +6,7 @@ import { ChatBox } from './features/chat/ChatBox';
 import Parse from 'parse';
 import { ProfileScreen } from './features/profile/ProfileScreen';
 import { FriendListScreen } from './features/profile/FriendListScreen';
+import { AboutScreen } from './features/about/AboutScreen';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -43,6 +44,7 @@ function App() {
           <button onClick={() => setView('mailbox')} className={`${view === 'mailbox' ? 'text-klein font-bold' : 'hover:scale-105'}`}>Mailbox</button>
           <button onClick={() => setView('friends')} className={`${view === 'friends' ? 'text-klein font-bold' : 'hover:scale-105'}`}>Network</button>
           <button onClick={() => setView('profile')} className={`${view === 'profile' ? 'text-klein font-bold' : 'hover:scale-105'}`}>Identity</button>
+          <button onClick={() => setView('about')} className={`${view === 'about' ? 'text-klein font-bold' : 'hover:scale-105'}`}>About</button>
           <button onClick={handleLogout} className="hover:scale-105 opacity-60 hover:opacity-100">Logout</button>
         </nav>
       </header>
@@ -51,6 +53,7 @@ function App() {
         {view === 'mailbox' && <Mailbox />}
         {view === 'friends' && <FriendListScreen onClose={() => setView('mailbox')} />}
         {view === 'profile' && <ProfileScreen onClose={() => setView('mailbox')} />}
+        {view === 'about' && <AboutScreen onClose={() => setView('mailbox')} />}
 
         <ChatBox />
       </main>
